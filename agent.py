@@ -1,38 +1,87 @@
-from bi_logic import pipeline_by_sector, revenue_this_quarter
-from monday_client import fetch_board, WORK_BOARD_ID, DEALS_BOARD_ID
-from data_processor import clean_board_data
+import pandas as pd
 
-# Load fresh data each query (real BI style)
+# -----------------------------
+# Pipeline by sector
+# -----------------------------
 
-def load_data():
-    work_raw = fetch_board(WORK_BOARD_ID)
-    deals_raw = fetch_board(DEALS_BOARD_ID)
+def pipeline_by_sector(deals_df, sector_name):
+    if "sector" not in deals_df.columns:
+        return {"error": "Sector data missing in deals board"}
 
-    work_df = clean_board_data(work_raw)
-    deals_df = clean_board_data(deals_raw)
+    filtered = deals_df[deals_df["sector"] == sector_name]
 
-    return work_df, deals_df
+    if filtered.empty:
+        return {
+            "sector": sector_name,
+            "deal_count": 0,
+            "total_pipeline_value": 0
+        }
+
+    if "revenue" not in filtered.columns:
+        total_value = 0
+    else:
+        total_value = filtered["revenue"].fillna(0).sum()
+
+    return {
+        "sector": sector_name,
+        "deal_count": len(filtered),
+        "total_pipeline_value": round(float(total_value), 2)
+    }
 
 
-def handle_query(user_query):
-    q = user_query.lower()
+# -----------------------------
+# Revenue this quarter
+# -----------------------------
 
-    work_df, deals_df = load_data()
+def revenue_this_quarter(work_df):
+    if "end_date" not in work_df.columns or "revenue" not in work_df.columns:
+        return 0
 
-    # --- Pipeline queries ---
-    if "pipeline" in q:
-        if "mining" in q:
-            return pipeline_by_sector(deals_df, "Mining")
-        if "power" in q or "powerline" in q:
-            return pipeline_by_sector(deals_df, "Powerline")
+    work_df["end_date"] = pd.to_datetime(work_df["end_date"], errors="coerce")
 
-        return "Which sector should I analyze? (Mining, Powerline, Renewables)"
+    now = pd.Timestamp.now()
+    q = now.quarter
+    y = now.year
 
-    # --- Revenue queries ---
-    if "revenue" in q and "quarter" in q:
-        return f"Revenue this quarter: {revenue_this_quarter(work_df)}"
+    q_df = work_df[
+        (work_df["end_date"].dt.quarter == q) &
+        (work_df["end_date"].dt.year == y)
+    ]
 
-    if "revenue" in q:
-        return f"Total revenue: {work_df['revenue'].sum()}"
+    return float(q_df["revenue"].fillna(0).sum())
 
-    return "I can help with pipeline, revenue, and sector performance. Try asking differently."
+
+# -----------------------------
+# Best performing sector
+# -----------------------------
+
+def best_sector(work_df):
+    if "sector" not in work_df.columns or "revenue" not in work_df.columns:
+        return None
+
+    sector_perf = (
+        work_df.groupby("sector")["revenue"]
+        .sum()
+        .sort_values(ascending=False)
+    )
+
+    if sector_perf.empty:
+        return None
+
+    return sector_perf
+
+
+# -----------------------------
+# Data quality report
+# -----------------------------
+
+def data_quality(df):
+    report = {}
+
+    for col in df.columns:
+        report[col] = {
+            "missing": int(df[col].isna().sum()),
+            "total": int(len(df))
+        }
+
+    return report
