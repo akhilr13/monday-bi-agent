@@ -1,0 +1,160 @@
+📊 Monday.com Business Intelligence Agent
+
+An AI-powered business intelligence agent that connects directly to monday.com boards to answer founder-level business questions across work orders and sales pipeline data.
+
+This system dynamically fetches live data, cleans messy real-world records, and generates actionable executive insights through a conversational interface.
+
+
+🚀 Live Demo
+
+👉 https://monday-bi-agent-gxpgew4rachmmkbfl3jzd.streamlit.app
+
+
+🎯 Key Capabilities
+
+✅ Real-time monday.com API integration
+✅ Handles messy & incomplete business data
+✅ Cross-board analytics (Work Orders + Deals)
+✅ Founder-level conversational queries
+✅ Data quality diagnostics
+✅ Deployed interactive dashboard
+
+
+🧠 Example Questions
+
+Try asking:
+
+revenue this quarter
+
+best sector
+
+how is mining pipeline
+
+data quality issues
+
+pipeline for power sector
+
+
+
+🏗️ Architecture Overview
+monday_client.py   → API communication layer
+data_processor.py → Data cleaning & normalization
+bi_logic.py       → Business intelligence metrics
+agent.py          → Query understanding & routing
+app.py            → Streamlit conversational UI
+
+
+
+🔌 Monday.com Integration
+
+Uses monday.com GraphQL API (read-only):
+
+Dynamically fetches board data
+
+Handles authentication securely
+
+No static CSV usage
+
+Required Boards
+Board	Purpose
+Work Orders	Execution & revenue tracking
+Deals	Sales pipeline tracking
+
+
+
+🧹 Data Resilience Features
+
+Missing values handled gracefully
+
+Date formats normalized
+
+Revenue safely converted to numeric
+
+Data quality issues explicitly surfaced
+
+
+
+📈 Business Intelligence Provided
+
+Quarterly revenue
+
+Sector performance ranking
+
+Pipeline value by sector
+
+Deal volume metrics
+
+Data completeness health checks
+
+
+
+
+🖥️ Local Setup 
+1. Clone Repository
+git clone https://github.com/akhilr13/monday-bi-agent.git
+cd monday-bi-agent
+
+2. Install Dependencies
+pip install -r requirements.txt
+
+3. Set Environment Variable
+
+Create .env file:
+
+MONDAY_API_KEY=your_api_key_here
+
+4. Run App
+streamlit run app.py
+
+
+
+📦 Core Dependencies
+
+pandas
+
+requests
+
+streamlit
+
+python-dotenv
+
+
+
+🧾 Project Structure
+├── app.py
+├── agent.py
+├── monday_client.py
+├── data_processor.py
+├── bi_logic.py
+├── requirements.txt
+└── README.md
+
+
+📊 Leadership Update Interpretation
+
+The agent summarizes:
+
+Revenue performance
+
+Sector health
+
+Pipeline strength
+
+Data quality risks
+
+This enables rapid executive decision-making without manual analysis
+
+
+⚖️ Key Design Trade-offs
+Choice	Reason
+API over CSV	Real-world BI behavior
+Rule-based NLP	Reliability & speed
+Streamlit	Fast deployment
+Layered design	Scalability
+
+
+
+👤 Author
+
+Akhil R
+GitHub: https://github.com/akhilr13
