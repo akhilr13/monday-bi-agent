@@ -1,87 +1,105 @@
-import pandas as pd
+from bi_logic import (
+    pipeline_by_sector,
+    revenue_this_quarter,
+    best_sector,
+    data_quality
+)
+
 
 # -----------------------------
-# Pipeline by sector
+# Smart explanation layer
 # -----------------------------
 
-def pipeline_by_sector(deals_df, sector_name):
-    if "sector" not in deals_df.columns:
-        return {"error": "Sector data missing in deals board"}
+def explain_revenue(value, df):
+    zero_or_missing = (df["revenue"].isna().sum() + (df["revenue"] == 0).sum())
 
-    filtered = deals_df[deals_df["sector"] == sector_name]
+    if value == 0:
+        return f"""
+Revenue this quarter is ₹0.
 
-    if filtered.empty:
-        return {
-            "sector": sector_name,
-            "deal_count": 0,
-            "total_pipeline_value": 0
-        }
+Key observations:
+• Most work orders are scheduled in future periods
+• {zero_or_missing} records have missing or zero revenue values
 
-    if "revenue" not in filtered.columns:
-        total_value = 0
+This likely understates true business performance.
+"""
     else:
-        total_value = filtered["revenue"].fillna(0).sum()
-
-    return {
-        "sector": sector_name,
-        "deal_count": len(filtered),
-        "total_pipeline_value": round(float(total_value), 2)
-    }
+        return f"Revenue this quarter is ₹{round(value,2)}"
 
 
-# -----------------------------
-# Revenue this quarter
-# -----------------------------
+def explain_pipeline(result):
+    if result["deal_count"] == 0:
+        return f"""
+No active deals found in the {result['sector']} sector.
 
-def revenue_this_quarter(work_df):
-    if "end_date" not in work_df.columns or "revenue" not in work_df.columns:
-        return 0
+This may indicate:
+• Deals not tagged with sector properly
+• Pipeline currently inactive
+"""
 
-    work_df["end_date"] = pd.to_datetime(work_df["end_date"], errors="coerce")
+    return f"""
+Pipeline summary for {result['sector']} sector:
 
-    now = pd.Timestamp.now()
-    q = now.quarter
-    y = now.year
-
-    q_df = work_df[
-        (work_df["end_date"].dt.quarter == q) &
-        (work_df["end_date"].dt.year == y)
-    ]
-
-    return float(q_df["revenue"].fillna(0).sum())
+• Active deals: {result['deal_count']}
+• Total pipeline value: ₹{result['total_pipeline_value']}
+"""
 
 
 # -----------------------------
-# Best performing sector
+# Main query handler
 # -----------------------------
 
-def best_sector(work_df):
-    if "sector" not in work_df.columns or "revenue" not in work_df.columns:
-        return None
+def handle_query(query, work_df, deals_df):
 
-    sector_perf = (
-        work_df.groupby("sector")["revenue"]
-        .sum()
-        .sort_values(ascending=False)
-    )
+    q = query.lower()
 
-    if sector_perf.empty:
-        return None
+    # -------- Revenue --------
+    if "revenue" in q and "quarter" in q:
+        revenue = revenue_this_quarter(work_df)
+        return explain_revenue(revenue, work_df)
 
-    return sector_perf
+    # -------- Pipeline sector --------
+    if "pipeline" in q and "sector" in q:
+        for sector in deals_df["sector"].dropna().unique():
+            if sector.lower() in q:
+                result = pipeline_by_sector(deals_df, sector)
+                return explain_pipeline(result)
 
+        return "Which sector would you like to analyze?"
 
-# -----------------------------
-# Data quality report
-# -----------------------------
+    if "pipeline" in q:
+        return "Please specify the sector (for example: mining pipeline)"
 
-def data_quality(df):
-    report = {}
+    # -------- Best sector --------
+    if "best sector" in q or "top sector" in q:
+        sector_perf = best_sector(work_df)
 
-    for col in df.columns:
-        report[col] = {
-            "missing": int(df[col].isna().sum()),
-            "total": int(len(df))
+        if sector_perf is None:
+            return "Not enough data to evaluate sector performance."
+
+        best = sector_perf.index[0]
+        value = sector_perf.iloc[0]
+
+        return f"Best performing sector is {best} with ₹{round(value,2)} revenue."
+
+    # -------- Data quality --------
+    if "data quality" in q or "missing" in q:
+        work_report = data_quality(work_df)
+        deals_report = data_quality(deals_df)
+
+        return {
+            "work_orders": work_report,
+            "deals": deals_report
         }
 
-    return report
+    # -------- Help fallback --------
+    return """
+I can help with:
+
+• Revenue this quarter
+• Pipeline by sector (example: mining pipeline)
+• Best performing sector
+• Data quality issues
+
+Try asking one of these.
+"""
